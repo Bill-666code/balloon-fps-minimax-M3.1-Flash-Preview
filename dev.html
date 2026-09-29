@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>气球人爆破队 · BALLOON BUSTERS</title>
+<style>
+  :root{
+    --pink:#ff4d8d; --cyan:#3ddcff; --yellow:#ffd93d; --violet:#a78bfa; --lime:#8bff6b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#0a0618;color:#fff;
+    font-family:"PingFang SC","Microsoft YaHei",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  canvas{display:block;position:fixed;inset:0;width:100%;height:100%;image-rendering:pixelated;cursor:none}
+  #scan{position:fixed;inset:0;pointer-events:none;z-index:5;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.13) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+  #vig{position:fixed;inset:0;pointer-events:none;z-index:4;
+    background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.35) 100%)}
+
+  .screen{position:fixed;inset:0;z-index:10;display:none;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 40%,rgba(20,10,50,.55),rgba(5,2,15,.88));
+    backdrop-filter:blur(3px);}
+  .screen.on{display:flex;animation:fade .28s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .card{width:min(760px,92vw);max-height:92vh;overflow:auto;padding:34px 40px;border-radius:24px;
+    background:linear-gradient(160deg,rgba(38,22,72,.94),rgba(14,8,32,.96));
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);text-align:center}
+  h1{font-size:clamp(30px,5.2vw,54px);line-height:1.05;letter-spacing:1px;margin-bottom:6px;
+    background:linear-gradient(92deg,#ff4d8d,#ffd93d 40%,#3ddcff 75%,#a78bfa);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 4px 18px rgba(255,77,141,.35))}
+  .sub{color:rgba(255,255,255,.55);letter-spacing:5px;font-size:12px;margin-bottom:22px;font-weight:600}
+  .desc{color:rgba(255,255,255,.72);font-size:14.5px;line-height:1.85;margin-bottom:22px}
+  .desc b{color:var(--yellow)}
+  .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+  button{font:inherit;font-weight:800;letter-spacing:1px;color:#160b2e;cursor:pointer;border:0;
+    padding:13px 30px;border-radius:14px;font-size:15px;transition:.16s;
+    background:linear-gradient(180deg,#ffe07a,#ffb63d);box-shadow:0 6px 0 #c97a12,0 10px 22px rgba(255,182,61,.3)}
+  button:hover{transform:translateY(-2px);box-shadow:0 8px 0 #c97a12,0 14px 26px rgba(255,182,61,.4)}
+  button:active{transform:translateY(3px);box-shadow:0 2px 0 #c97a12}
+  button.ghost{background:rgba(255,255,255,.10);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+  button.ghost:hover{background:rgba(255,255,255,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+  button.pink{background:linear-gradient(180deg,#ff7fb0,#ff2e6e);box-shadow:0 6px 0 #a81349,0 10px 22px rgba(255,46,110,.3)}
+  .keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-top:8px;text-align:left}
+  .keys div{display:flex;align-items:center;gap:9px;font-size:12.5px;color:rgba(255,255,255,.65)}
+  kbd{display:inline-block;min-width:26px;text-align:center;padding:3px 7px;border-radius:6px;font-size:11px;font-weight:800;
+    background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.2);box-shadow:0 2px 0 rgba(0,0,0,.35);color:#fff}
+  .tag{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;margin:0 4px 4px 0;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.7)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:18px 0 22px}
+  .stat{padding:14px 8px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+  .stat b{display:block;font-size:26px;font-weight:900;color:var(--yellow);line-height:1.2}
+  .stat span{font-size:11px;color:rgba(255,255,255,.5);letter-spacing:1px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:14px 0;font-size:13.5px;color:rgba(255,255,255,.8)}
+  .row input[type=range]{flex:1;max-width:280px;accent-color:var(--pink)}
+  .row .val{width:56px;text-align:right;font-weight:800;color:var(--yellow);font-size:13px}
+  .foot{margin-top:16px;font-size:11px;color:rgba(255,255,255,.35);line-height:1.7}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vig"></div><div id="scan"></div>
+
+<!-- 主菜单 -->
+<div class="screen on" id="menu">
+  <div class="card">
+    <h1>气球人爆破队</h1>
+    <div class="sub">BALLOON BUSTERS · 100% 代码生成</div>
+    <p class="desc">
+      天空派对岛上，气球人们占领了充气城堡。带上你的<b>吹针爆珠枪</b>，把每一个「噗」响变成狂欢。<br>
+      本作的<b>贴图、角色、武器、地图、特效、音效与音乐全部由代码实时生成</b> —— 没有任何一张外部图片、一个外部音频文件。
+    </p>
+    <div class="btns">
+      <button id="btnStart">▶ 开始派对</button>
+      <button class="ghost" id="btnHow">玩法说明</button>
+      <button class="ghost" id="btnSet">设置</button>
+    </div>
+    <div>
+      <span class="tag">WASD 移动</span><span class="tag">鼠标 瞄准</span><span class="tag">左键 开火</span>
+      <span class="tag">右键 精瞄</span><span class="tag">R 换弹</span><span class="tag">G 榴弹</span>
+      <span class="tag">1-4 换枪</span><span class="tag">Shift 冲刺</span><span class="tag">Esc 暂停</span>
+    </div>
+    <div class="foot">引擎：手写光线投射 + 逐像素地面投射 + Canvas 2D 精灵合成<br>建议使用桌面浏览器与独立显卡运行</div>
+  </div>
+</div>
+
+<!-- 玩法 -->
+<div class="screen" id="how">
+  <div class="card">
+    <h1 style="font-size:34px">玩法说明</h1>
+    <div class="sub">HOW TO PLAY</div>
+    <p class="desc" style="text-align:left">
+      <b>① 爆掉气球人</b><br>
+      红头「弹弹兵」成群扑来，蓝头「飘飘怪」会飘在半空，「吹镖手」在远处吐镖，「爆爆球」靠近就自爆，「胖墩墩」皮厚，蓝底黄头的小怪会召唤同伙。波次每隔 5 波出现 <b>气球王 BOSS</b>。
+      <br><br>
+      <b>② 连爆 Chain</b><br>
+      在 1.5 秒内连续命中，倍率会一路累加，最高可达 ×20，屏幕中央会显示连爆数。
+      <br><br>
+      <b>③ 气球里藏着补给</b><br>
+      场上的普通气球纯粹是手感和分数；但带<b>虚线光环</b>的道具气球里装着补给 —— 打爆它才能拿到。绿色十字回血，黄色备弹，红色榴弹，蓝色射速，紫色护盾。
+      <br><br>
+      <b>④ 四把枪</b><br>
+      <b>吹针爆珠枪</b>精准一击一泡；<b>气泵霰弹枪</b>八连气压制群怪；<b>彩带加农炮</b>抛射榴弹范围清扫；<b>纸带连发</b>泼水式覆盖。霰弹枪打空会自动续气。
+    </p>
+    <div class="btns"><button id="btnHowBack">明白了</button></div>
+  </div>
+</div>
+
+<!-- 设置 -->
+<div class="screen" id="set">
+  <div class="card">
+    <h1 style="font-size:34px">设置</h1>
+    <div class="sub">SETTINGS</div>
+    <div class="row"><span>鼠标灵敏度</span><input type="range" id="sSens" min="4" max="40" value="22"><span class="val" id="vSens">1.00</span></div>
+    <div class="row"><span>音量</span><input type="range" id="sVol" min="0" max="100" value="80"><span class="val" id="vVol">80</span></div>
+    <div class="row"><span>视野 FOV</span><input type="range" id="sFov" min="55" max="100" value="80"><span class="val" id="vFov">77°</span></div>
+    <div class="row"><span>程序化音乐</span><input type="checkbox" id="sMus" checked></div>
+    <div class="row"><span>显示性能信息</span><input type="checkbox" id="sFps"></div>
+    <div class="row"><span>无敌模式（练习）</span><input type="checkbox" id="sGod"></div>
+    <div class="btns"><button id="btnSetBack">返回</button></div>
+  </div>
+</div>
+
+<!-- 暂停 -->
+<div class="screen" id="pause">
+  <div class="card" style="width:min(460px,90vw)">
+    <h1 style="font-size:36px">已暂停</h1>
+    <div class="sub">PAUSED</div>
+    <div class="btns" style="flex-direction:column;align-items:stretch">
+      <button id="btnResume">▶ 继续</button>
+      <button class="ghost" id="btnRestart">重新开始</button>
+      <button class="ghost" id="btnSet2">设置</button>
+      <button class="ghost" id="btnQuit">回到主菜单</button>
+    </div>
+  </div>
+</div>
+
+<!-- 结算 -->
+<div class="screen" id="over">
+  <div class="card">
+    <h1 id="overTitle">派对结束</h1>
+    <div class="sub" id="overSub">GAME OVER</div>
+    <div class="stats" id="overStats"></div>
+    <div class="btns">
+      <button class="pink" id="btnAgain">再来一局</button>
+      <button class="ghost" id="btnMenu">主菜单</button>
+    </div>
+  </div>
+</div>
+
+<script src="src/core.js"></script>
+<script src="src/art.js"></script>
+<script src="src/world.js"></script>
+<script src="src/render.js"></script>
+<script src="src/game.js"></script>
+<script>
+/* ============================ 启动与 UI ============================ */
+const $ = id => document.getElementById(id);
+const el = { menu:$('menu'), how:$('how'), set:$('set'), pause:$('pause'), over:$('over') };
+function show(which) { for (const k in el) el[k].classList.toggle('on', k === which); }
+function hideAll() { for (const k in el) el[k].classList.remove('on'); }
+
+function boot() {
+  const cv = $('game');
+  R.init(cv);
+  Input.init(cv);
+  buildArt();
+  game.reset(true);
+  const st = loadLevel(0);
+  P.x = st.x; P.y = st.y; P.z = 0.62; P.a = -PI / 2;
+  R.buildMaps();
+  show('menu');
+
+  Input.onPress = (code, e) => {
+    keysPressedThisFrame.add(code);
+    if (code === 'Escape') {
+      if (game.state === 'play') pauseGame();
+      else if (game.state === 'pause') resumeGame();
+    }
+    if (code === 'KeyM') { const m = Sound.toggleMute(); toast2(m ? '已静音' : '声音开启'); }
+    if (code === 'F3') { game.showFps = !game.showFps; $('sFps').checked = game.showFps; }
+  };
+  requestAnimationFrame(frame);
+}
+function toast2(t) { game.toast(t, 0x9ad5ff); }
+
+function startGame() {
+  Sound.init(); Sound.resume();
+  game.reset(true);
+  const st = loadLevel(0);
+  P.x = st.x; P.y = st.y; P.z = 0.55; P.a = -PI / 2; P.pitch = 0;
+  R.buildMaps();
+  game.state = 'play';
+  hideAll();
+  startWave(1);
+  Music.start(); Music.setIntensity(0.35);
+  Input.lock(R.cv);
+}
+function pauseGame() {
+  if (game.state !== 'play') return;
+  game.state = 'pause'; show('pause'); Music.stop();
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function resumeGame() {
+  if (game.state !== 'pause') return;
+  game.state = 'play'; hideAll(); Sound.resume();
+  Music.start();
+  Input.lock(R.cv);
+}
+function showOverScreen() {
+  const secs = ((performance.now() - game.startTime) / 1000);
+  const acc = game.totalShots ? Math.round(game.totalHits / game.totalShots * 100) : 0;
+  $('overTitle').textContent = game.cleared >= 5 ? '派对之神！' : '派对结束';
+  $('overSub').textContent = game.cleared >= 5 ? 'PARTY LEGEND' : 'GAME OVER';
+  $('overStats').innerHTML = [
+    ['最终得分', game.score], ['到达波次', game.wave], ['清场数', game.cleared],
+    ['爆掉气球', game.totalPops], ['命中率', acc + '%'], ['最高连爆', '×' + game.bestChain],
+    ['击杀', game.kills], ['存活', Math.floor(secs / 60) + ':' + String(Math.floor(secs % 60)).padStart(2, '0')]
+  ].map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
+  show('over');
+}
+
+/* 按钮 */
+$('btnStart').onclick = startGame;
+$('btnAgain').onclick = startGame;
+$('btnHow').onclick = () => show('how');
+$('btnHowBack').onclick = () => show('menu');
+$('btnSet').onclick = () => { lastScreen = 'menu'; show('set'); };
+$('btnSet2').onclick = () => { lastScreen = 'pause'; show('set'); };
+$('btnSetBack').onclick = () => show(lastScreen);
+$('btnResume').onclick = resumeGame;
+$('btnRestart').onclick = startGame;
+$('btnQuit').onclick = () => { game.state = 'menu'; Music.stop(); P.x = world.map.start.x; P.y = world.map.start.y; show('menu'); };
+$('btnMenu').onclick = $('btnQuit').onclick;
+let lastScreen = 'menu';
+
+/* 设置绑定 */
+$('sSens').oninput = e => { Input.sens = e.target.value / 10000; $('vSens').textContent = (e.target.value / 22).toFixed(2); };
+$('sVol').oninput = e => { Sound.setVol(e.target.value / 100); $('vVol').textContent = e.target.value; };
+$('sFov').oninput = e => { R.projPlane = (R.SW / 2) / (e.target.value / 100); $('vFov').textContent = Math.round(2 * Math.atan(1 / (e.target.value / 100)) * 180 / PI) + '°'; };
+$('sMus').onchange = e => { if (e.target.checked) { Music.start(); } else Music.stop(); };
+$('sFps').onchange = e => game.showFps = e.target.checked;
+$('sGod').onchange = e => game.god = e.target.checked;
+
+addEventListener('keydown', e => {
+  if (e.code === 'Escape') {
+    const open = el.set.classList.contains('on');
+    if (open) { show(lastScreen); e.preventDefault(); }
+  }
+});
+
+boot();
+</script>
+</body>
+</html>
